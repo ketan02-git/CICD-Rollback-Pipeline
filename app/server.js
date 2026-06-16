@@ -67,7 +67,7 @@ app.get("/", (req, res) => {
       <h1>🚀 Node.js CI/CD Demo App</h1>
 
       <div class="card">
-        <p><b>Version:</b> ${process.env.VERSION || "v1"}</p>
+        <p><b>Version:</b> "v2"}</p>
         <p><b>Status:</b> Running</p>
       </div>
 
