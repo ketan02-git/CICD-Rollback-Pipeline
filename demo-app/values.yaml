@@ -1,0 +1,30 @@
+replicaCount: 4
+
+image:
+  repository: cloudketan/demo-app
+  pullPolicy: Always
+  tag: "v1"
+
+service:
+  type: NodePort
+  port: 3000
+  nodePort: 30010
+
+env:
+  VERSION: "v1"
+  FAIL_MODE: "false"
+  LATENCY_SPIKE: "false"
+
+readinessProbe:
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 2
+
+livenessProbe:
+  path: /health
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
