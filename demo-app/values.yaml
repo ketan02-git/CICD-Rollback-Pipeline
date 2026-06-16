@@ -3,7 +3,7 @@ replicaCount: 4
 image:
   repository: cloudketan/demo-app
   pullPolicy: Always
-  tag: "v2"
+  tag: "v1"
 
 service:
   type: NodePort
@@ -11,9 +11,9 @@ service:
   nodePort: 30010
 
 env:
-  VERSION: "v2"
-  FAIL_MODE: "true"
-  LATENCY_SPIKE: "true"
+  VERSION: "v1"
+  FAIL_MODE: "false"
+  LATENCY_SPIKE: "false"
 
 readinessProbe:
   path: /health
