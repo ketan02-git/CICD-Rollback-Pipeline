@@ -1,3 +1,86 @@
+# name: CI-CD-Rollback-Pipeline
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# env:
+#   IMAGE_NAME: demo-app
+#   RELEASE_NAME: demo-app
+#   CHART_PATH: ./demo-app
+
+# jobs:
+#   deploy:
+#     runs-on: self-hosted
+
+#     steps:
+#       - name: Checkout Code
+#         uses: actions/checkout@v4
+
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: 20
+
+#       - name: Install Dependencies
+#         working-directory: ./app
+#         run: npm ci
+
+#       - name: Run Tests
+#         working-directory: ./app
+#         run: npm test
+
+#       - name: Run Gitleaks
+#         uses: gitleaks/gitleaks-action@v2
+
+#       - name: Login to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USER }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+#       - name: Build Docker Image
+#         run: |
+#           docker build \
+#             -t ${{ secrets.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+
+#       - name: Push Docker Image
+#         run: |
+#           docker push \
+#             ${{ secrets.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+#       - name: Configure Kubeconfig
+#         run: |
+#           mkdir -p $HOME/.kube
+#           echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+#           chmod 600 $HOME/.kube/config
+
+#       - name: Helm Lint
+#         run: |
+#           helm lint ${{ env.CHART_PATH }}
+
+#       - name: Deploy with Helm (Auto Rollback Enabled)
+#         run: |
+#           helm upgrade --install ${{ env.RELEASE_NAME }} ${{ env.CHART_PATH }} \
+#             --set image.repository=${{ secrets.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }} \
+#             --set image.tag=${{ github.sha }} \
+#             --atomic \
+#             --wait \
+#             --timeout 5m
+
+#       - name: Verify Helm Release
+#         run: |
+#           helm status ${{ env.RELEASE_NAME }}
+
+#       - name: Show Release History
+#         run: |
+#           helm history ${{ env.RELEASE_NAME }}
+
+#       - name: Deployment Summary
+#         run: |
+#           echo "Deployment Completed Successfully"
+
 name: CI-CD-Rollback-Pipeline
 
 on:
@@ -9,15 +92,23 @@ env:
   IMAGE_NAME: demo-app
   RELEASE_NAME: demo-app
   CHART_PATH: ./demo-app
+  GIT_USER: ketan02-git
+  GIT_EMAIL: ambureketan@gmail.com
 
 jobs:
   deploy:
     runs-on: self-hosted
 
     steps:
+      # ---------------------------
+      # 1. Checkout
+      # ---------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # ---------------------------
+      # 2. Setup Node
+      # ---------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -31,35 +122,77 @@ jobs:
         working-directory: ./app
         run: npm test
 
+      # ---------------------------
+      # 3. Security Scan
+      # ---------------------------
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
 
+      # ---------------------------
+      # 4. Docker Login
+      # ---------------------------
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # ---------------------------
+      # 5. Build & Push Image
+      # ---------------------------
       - name: Build Docker Image
         run: |
-          docker build \
-            -t ${{ secrets.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker build -t ${{ secrets.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
 
       - name: Push Docker Image
         run: |
-          docker push \
-            ${{ secrets.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ secrets.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+      # ---------------------------
+      # 6. Install yq (safe YAML update tool)
+      # ---------------------------
+      - name: Install yq
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      # ---------------------------
+      # 7. Update Helm values.yaml (Git commit version update)
+      # ---------------------------
+      - name: Update Helm values.yaml
+        run: |
+          yq e -i '.image.tag = strenv(GITHUB_SHA)' ${{ env.CHART_PATH }}/values.yaml
+
+      - name: Commit and Push Updated Manifest
+        run: |
+          git config user.name "${{ env.GIT_USER }}"
+          git config user.email "${{ env.GIT_EMAIL }}"
+
+          git add ${{ env.CHART_PATH }}/values.yaml
+
+          git commit -m "chore: update image tag to ${{ github.sha }}" || echo "No changes to commit"
+
+          git push origin ${GITHUB_REF_NAME}
+
+      # ---------------------------
+      # 8. Configure Kubeconfig
+      # ---------------------------
       - name: Configure Kubeconfig
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      # ---------------------------
+      # 9. Helm Lint
+      # ---------------------------
       - name: Helm Lint
         run: |
           helm lint ${{ env.CHART_PATH }}
 
+      # ---------------------------
+      # 10. Deploy (Rollback enabled)
+      # ---------------------------
       - name: Deploy with Helm (Auto Rollback Enabled)
         run: |
           helm upgrade --install ${{ env.RELEASE_NAME }} ${{ env.CHART_PATH }} \
@@ -69,6 +202,9 @@ jobs:
             --wait \
             --timeout 5m
 
+      # ---------------------------
+      # 11. Verify Deployment
+      # ---------------------------
       - name: Verify Helm Release
         run: |
           helm status ${{ env.RELEASE_NAME }}
@@ -77,6 +213,13 @@ jobs:
         run: |
           helm history ${{ env.RELEASE_NAME }}
 
+      # ---------------------------
+      # 12. Summary
+      # ---------------------------
       - name: Deployment Summary
         run: |
-          echo "Deployment Completed Successfully"
+          echo "=================================="
+          echo "🚀 Deployment Successful"
+          echo "Image: ${{ secrets.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "Release: ${{ env.RELEASE_NAME }}"
+          echo "=================================="

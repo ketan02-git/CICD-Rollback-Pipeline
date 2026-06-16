@@ -7,10 +7,78 @@ const FAIL_MODE = process.env.FAIL_MODE === "true";
 const LATENCY_SPIKE = process.env.LATENCY_SPIKE === "true";
 
 app.get("/", (req, res) => {
-  res.json({
-    message: "Node.js CI/CD Demo App",
-    version: VERSION
-  });
+  res.send(`
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title>Node CI/CD App</title>
+
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      .container {
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+      }
+
+      .card {
+        background: rgba(255,255,255,0.1);
+        padding: 20px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      }
+
+      .buttons a {
+        display: inline-block;
+        margin: 10px;
+        padding: 10px 20px;
+        background: #3b82f6;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: 0.3s;
+      }
+
+      .buttons a:hover {
+        background: #2563eb;
+        transform: scale(1.05);
+      }
+    </style>
+
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>🚀 Node.js CI/CD Demo App</h1>
+
+      <div class="card">
+        <p><b>Version:</b> ${process.env.VERSION || "v1"}</p>
+        <p><b>Status:</b> Running</p>
+      </div>
+
+      <div class="buttons">
+        <a href="/health">Health</a>
+        <a href="/metrics">Metrics</a>
+      </div>
+    </div>
+  </body>
+  </html>
+  `);
 });
 
 // Health endpoint for Prometheus / K8s
