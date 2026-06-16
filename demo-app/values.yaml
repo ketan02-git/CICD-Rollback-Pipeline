@@ -1,46 +1,37 @@
 replicaCount: 4
-
 image:
   repository: cloudketan/demo-app
   pullPolicy: Always
-  tag: "v2"
-
+  tag: "b34296f171aaf123916a415889a4e37f30d51308"
 service:
   type: NodePort
   port: 3000
   nodePort: 30010
-
 env:
   VERSION: "v2"
   FAIL_MODE: "true"
   LATENCY_SPIKE: "true"
-
 readinessProbe:
   path: /health
   initialDelaySeconds: 5
   periodSeconds: 5
   timeoutSeconds: 2
   failureThreshold: 2
-
 livenessProbe:
   path: /health
   initialDelaySeconds: 15
   periodSeconds: 10
   timeoutSeconds: 2
   failureThreshold: 3
-
 serviceAccount:
   create: true
   name: ""
-
 ingress:
   enabled: false
   className: ""
   hosts: []
   tls: []
-
 httpRoute:
   enabled: false
-
 autoscaling:
   enabled: false
