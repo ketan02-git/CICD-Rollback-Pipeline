@@ -43,7 +43,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Set short SHA
-        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-5)" >> $GITHUB_ENV
+        run: echo "SHORT_SHA=$(echo $github.sha | cut -c1-5)" >> $GITHUB_ENV
 
       - name: Build Docker Image
         run: |
