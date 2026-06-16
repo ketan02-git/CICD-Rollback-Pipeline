@@ -32,3 +32,9 @@ livenessProbe:
 serviceAccount:
   create: true
   name: ""
+
+ingress:
+  enabled: false
+  className: ""
+  hosts: []
+  tls: []
